@@ -1,0 +1,9 @@
+workspace(ENV['WORKSPACE'])
+scheme(ENV['SCHEME'])
+clean(true)
+export_method("app-store")
+export_options({
+    provisioningProfiles: {
+        ENV['BUNDLE_IDENTIFIER'] => ENV['PROVISIONING_PROFILE_NAME'],
+    },
+})

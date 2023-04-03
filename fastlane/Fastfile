@@ -1,0 +1,78 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Push a new beta build to TestFlight"
+  
+  lane :beta do |options| 
+
+    #  xcode_install(version: "14.0.1")
+     # xcversion(version: "14.0.1")
+  
+    increment_version_number_in_xcodeproj(
+          bump_type: "patch", 
+          omit_zero_patch_version: true
+    )
+    
+    # increment_build_number_in_xcodeproj(
+    #     xcodeproj: ENV['XCODEPROJ']
+    # )
+
+    incrementedNum = increment_build_number(
+        build_number: latest_testflight_build_number + 1
+    )
+    
+    clear_derived_data
+    cocoapods(clean_install: true)
+
+    app_store_connect_api_key(
+        key_id: "FKRR388LW3",
+        issuer_id: "e2823533-82e6-448d-9e99-f2cff6ece290",
+        key_filepath: "./AuthKey.p8"
+    )
+    
+    gym
+    notification(subtitle: "Finished Archiving", message: "Uploading to testflight....")
+  #   diawi(token: ENV['DIAWI_TOKEN'])
+  #   send_message_to_teams(options)
+  #   ENV['ITMSTRANSPORTER_FORCE_ITMS_PACKAGE_UPLOAD'] = "true"
+  #   upload_to_testflight(
+  #     # skip_waiting_for_build_processing: true, #If set to true distribute external won't work
+  #     distribute_external: true,
+  #     changelog: options[:RELEASE_NOTES],
+  #     groups: [ #Specify external tester groups
+  #     "Testers"
+  # ],)
+    say("Your app is uploaded to testflight")
+    
+  end
+ 
+  
+  lane :send_message_to_teams do |options| 
+
+    versionNum = get_version_number_from_xcodeproj(xcodeproj: ENV['XCODEPROJ'])
+    
+    buildNum = get_build_number_from_xcodeproj(xcodeproj: ENV['XCODEPROJ'])
+    
+    UI.message "New Build: #{versionNum} #{buildNum}"
+
+    teams_bot(
+        teams_url: ENV['TEAMS_WEBHOOK'],
+        title: "iOS Version #{versionNum} (#{buildNum})",
+        activity_subtitle: "Hi team, Please delete the previous build and reinstall",
+        activity_title: "",
+        text: "",
+        facts: [
+            {
+                "name" => "Release notes",
+                "value" => options[:RELEASE_NOTES]
+            },
+            {
+                "name" => "Diawi Link",
+                "value" => lane_context[SharedValues::UPLOADED_FILE_LINK_TO_DIAWI]
+            },
+        ],
+        use_markdown: true # Using markdown allowing you to add URL in your text
+    )
+
+  end
+end
